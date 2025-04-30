@@ -1,0 +1,7 @@
+ccxt
+ta
+pandas
+numpy
+python-dotenv
+pyautogui
+selenium

@@ -1,4 +1,4 @@
-from data_feed import fetch_candles  # ✅ No get_okx_client needed anymore
+from data_feed import fetch_candles
 from indicators import apply_indicators
 from strategy import check_entry
 from tv_trader import execute_trade
@@ -6,11 +6,13 @@ from utils import can_trade
 from config import CONFIG
 import time
 
-# from plotter import plot_chart
+position = None
+entry_price = None
 
 def main():
-    print("⏳ Starting bot... Open TradingView Paper Trading manually.")
-    time.sleep(3)  # wait for user to open chart
+    global position, entry_price
+
+    print("Bot started. Waiting for signal...")
 
     while True:
         try:
@@ -20,20 +22,43 @@ def main():
 
             df = apply_indicators(df)
             signal = check_entry(df)
+            current_price = df["close"].iloc[-1]
 
-            if signal and can_trade(CONFIG["trade_cooldown"]):
-                current_price = df.iloc[-1]["close"]
-                print(f"[Signal] {signal.upper()} @ ${current_price:.2f}")
+            # No open position
+            if position is None and signal and can_trade(CONFIG["trade_cooldown"]):
                 execute_trade(
                     signal=signal,
                     current_price=current_price,
                     tp_pct=CONFIG["tp_pct"],
                     sl_pct=CONFIG["sl_pct"]
                 )
-            else:
-                print("No trade: waiting for valid signal or cooldown.")
+                entry_price = current_price
+                position = signal
+                print(f"[POSITION] Entered {position.upper()} at {entry_price:.2f}")
 
-            # plot_chart(df, signal=signal)
+            # Monitor open position
+            elif position == "long":
+                tp = entry_price * (1 + CONFIG["tp_pct"])
+                sl = entry_price * (1 - CONFIG["sl_pct"])
+                if current_price >= tp:
+                    print(f"[EXIT] TP hit. Closed LONG at {current_price:.2f}")
+                    position = None
+                elif current_price <= sl:
+                    print(f"[EXIT] SL hit. Closed LONG at {current_price:.2f}")
+                    position = None
+
+            elif position == "short":
+                tp = entry_price * (1 - CONFIG["tp_pct"])
+                sl = entry_price * (1 + CONFIG["sl_pct"])
+                if current_price <= tp:
+                    print(f"[EXIT] TP hit. Closed SHORT at {current_price:.2f}")
+                    position = None
+                elif current_price >= sl:
+                    print(f"[EXIT] SL hit. Closed SHORT at {current_price:.2f}")
+                    position = None
+
+            else:
+                print("Monitoring...")
 
         except Exception as e:
             print(f"[ERROR] {e}")

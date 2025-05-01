@@ -3,7 +3,7 @@ import pandas as pd
 
 exchange = ccxt.okx()
 
-def fetch_candles(symbol="BTC/USDT", timeframe="1m", limit=100):
+def fetch_candles(symbol="BTC/USD", timeframe="1m", limit=100):
     try:
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
         df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])  # ✅ 6 columns only

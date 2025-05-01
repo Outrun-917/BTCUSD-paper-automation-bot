@@ -6,7 +6,7 @@ from utils import can_trade
 from config import CONFIG
 import time
 
-from plotter import plot_chart
+# from plotter import plot_chart
 
 def main():
     print("⏳ Starting bot... Open TradingView Paper Trading manually.")
@@ -33,7 +33,7 @@ def main():
             else:
                 print("No trade: waiting for valid signal or cooldown.")
 
-            plot_chart(df, signal=signal)
+            # plot_chart(df, signal=signal)
 
         except Exception as e:
             print(f"[ERROR] {e}")

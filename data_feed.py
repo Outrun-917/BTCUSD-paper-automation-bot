@@ -1,20 +1,15 @@
 import ccxt
-from config import CONFIG
 import pandas as pd
-from datetime import datetime
 
-def get_okx_client():
-    return ccxt.okx({
-        'apiKey': CONFIG["apiKey"],
-        'secret': CONFIG["secret"],
-        'password': CONFIG["password"],
-        'enableRateLimit': True,
-        'options': {'defaultType': 'future'}
-    })
+exchange = ccxt.okx()
 
-def fetch_candles(client, symbol="BTC/USD", timeframe="1m", limit=100):
-    ohlcv = client.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-    df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-    df.set_index("timestamp", inplace=True)
-    return df
+def fetch_candles(symbol="BTC/USDT", timeframe="1m", limit=100):
+    try:
+        ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+        df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])  # ✅ 6 columns only
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+        df.set_index("timestamp", inplace=True)
+        return df
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch candles: {e}")
+        return None

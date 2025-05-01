@@ -4,8 +4,8 @@ import time
 POSITIONS = {
     "buy_button": (2439, 252),
     "sell_button": (2255, 251),
-    "tp_input_field": (2263, 579),
-    "sl_input_field": (2435, 580),
+    "tp_input_field": (2259, 513),
+    "sl_input_field": (2423, 513),
     "confirm_button": (2353, 644),
 }
 

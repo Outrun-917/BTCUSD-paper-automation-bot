@@ -1,9 +1,19 @@
 +40$
 
-Total = +40$
++26$
 
-Total Wins : 1
++30$
+
++21$
+
++31$
+
++28$
+
+Total = +176$
+
+Total Wins : 6
 
 Total Loss : 0
 
-Total trades : 1
+Total trades : 6

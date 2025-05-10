@@ -10,10 +10,30 @@
 
 +28$
 
-Total = +176$
+-21$
 
-Total Wins : 6
+-5$
 
-Total Loss : 0
+-24$
 
-Total trades : 6
++30$
+
++31$
+
+-21$
+
++22$
+
++28$
+
+-19$
+
++22$
+
+Total = +102$
+
+Total Wins : 11
+
+Total Loss : 4
+
+Total trades : 15

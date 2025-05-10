@@ -2,11 +2,11 @@ import pyautogui
 import time
 
 POSITIONS = {
-    "buy_button": (2439, 252),
-    "sell_button": (2255, 251),
-    "tp_input_field": (2259, 513),
-    "sl_input_field": (2423, 513),
-    "confirm_button": (2353, 644),
+    "buy_button": (-128, 250),
+    "sell_button": (-291, 249),
+    "tp_input_field": (-303, 519),
+    "sl_input_field": (-132, 517),
+    "confirm_button": (-205, 641),
 }
 
 def type_field(position, value):

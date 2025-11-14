@@ -1,5 +1,7 @@
 # BTCUSD Auto Scalper Bot (Visual Paper Trading via TradingView)
 
+# ! Disclaimer : This is an experimental bot, take profits and stop losses are not set up well, do not use this with real money !
+
 ## Description
 
 - Uses OKX API for BTCUSD price feed

@@ -21,7 +21,8 @@ SWING_LB = CONFIG["swing_lookback"]
 
 def run_backtest(df):
     df = apply_indicators(df, vwap_window=CONFIG["vwap_window"], atr_period=CONFIG["atr_period"],
-                          bb_period=CONFIG["bollinger_period"], bb_dev=CONFIG["bollinger_dev"])
+                          bb_period=CONFIG["bollinger_period"], bb_dev=CONFIG["bollinger_dev"],
+                          volume_period=CONFIG["volume_period"])
     df.dropna(inplace=True)
 
     balance = START_BALANCE

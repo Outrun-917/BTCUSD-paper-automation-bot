@@ -2,7 +2,8 @@ import pandas as pd
 import ta
 
 
-def apply_indicators(df, vwap_window=1440, atr_period=14, bb_period=20, bb_dev=2):
+def apply_indicators(df, vwap_window=1440, atr_period=14, bb_period=20, bb_dev=2,
+                     volume_period=20):
     df = df.copy()
 
     # RSI
@@ -22,5 +23,8 @@ def apply_indicators(df, vwap_window=1440, atr_period=14, bb_period=20, bb_dev=2
     df["atr"] = ta.volatility.AverageTrueRange(
         high=df["high"], low=df["low"], close=df["close"], window=atr_period
     ).average_true_range()
+
+    # Volume average
+    df["vol_avg"] = df["volume"].rolling(window=volume_period).mean()
 
     return df

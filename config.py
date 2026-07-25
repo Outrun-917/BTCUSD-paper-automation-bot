@@ -16,6 +16,14 @@ CONFIG = {
     "rsi_oversold": 32,
     "rsi_overbought": 68,
 
+    # --- Volume Filter ---
+    "volume_mult": 1.0,          # disabled (set 1.2+ to require above-avg volume)
+    "volume_period": 20,         # rolling window for volume average
+
+    # --- Time-of-Day Filter (UTC hours) ---
+    "trade_start_hour": 0,       # disabled (set 6-22 to filter to US/EU session)
+    "trade_end_hour": 24,
+
     # --- Exit: ATR-Based TP/SL ---
     "tp_atr_mult": 1.5,        # take-profit = entry ± 1.5 * ATR
     "sl_atr_mult": 1.0,        # stop-loss  = entry ± 1.0 * ATR

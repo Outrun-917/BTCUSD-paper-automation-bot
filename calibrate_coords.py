@@ -1,14 +1,16 @@
 import pyautogui
 
+
 def capture_position(label):
-    input(f"➡️ Hover over '{label}' and press [ENTER]...")
+    input(f"Hover over '{label}' and press [ENTER]...")
     pos = pyautogui.position()
     print(f"{label} = ({pos.x}, {pos.y})")
     return (pos.x, pos.y)
 
+
 def main():
-    print("\n🧭 TradingView Coordinate Capture Tool (Windows)")
-    print("------------------------------------------------")
+    print("\nTradingView Coordinate Capture Tool")
+    print("-----------------------------------")
 
     positions = {}
     elements = [
@@ -16,17 +18,19 @@ def main():
         "sell_button",
         "tp_input_field",
         "sl_input_field",
-        "confirm_button"
+        "confirm_button",
+        "close_position_button",
     ]
 
     for label in elements:
         positions[label] = capture_position(label)
 
-    print("\n📌 All positions captured:")
+    print("\nAll positions captured:")
     for key, val in positions.items():
-        print(f"{key}: {val}")
+        print(f'    "{key}": {val},')
 
-    print("\n✅ Copy these into `tv_trader.py` under `POSITIONS = { ... }`")
+    print("\nCopy these into `tv_trader.py` under `POSITIONS = { ... }`")
+
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,12 @@
-import pyautogui
+import logging
 import time
+
+import pyautogui
+
+log = logging.getLogger(__name__)
+
+pyautogui.FAILSAFE = True
+pyautogui.PAUSE = 0.1
 
 POSITIONS = {
     "buy_button": (-128, 250),
@@ -7,37 +14,77 @@ POSITIONS = {
     "tp_input_field": (-303, 519),
     "sl_input_field": (-132, 517),
     "confirm_button": (-205, 641),
+    "close_position_button": (0, 0),  # calibrate with calibrate_coords.py
 }
 
-def type_field(position, value):
-    pyautogui.moveTo(position)
-    pyautogui.click()
-    time.sleep(0.3)
-    pyautogui.hotkey("ctrl", "a")
-    pyautogui.typewrite(f"{value:.2f}")
+CLICK_DELAY = 0.5
+MAX_RETRIES = 3
 
-def execute_trade(signal, current_price, tp_pct, sl_pct):
-    print(f"[TV TRADE] Signal: {signal} @ {current_price}")
 
-    # Calculate actual prices
+def _safe_click(position, label="button"):
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            pyautogui.moveTo(position)
+            time.sleep(0.1)
+            pyautogui.click()
+            log.debug("Clicked %s (attempt %d)", label, attempt)
+            return True
+        except Exception as e:
+            log.warning("Click failed on %s (attempt %d): %s", label, attempt, e)
+            time.sleep(0.3)
+    log.error("All %d click attempts failed for %s", MAX_RETRIES, label)
+    return False
+
+
+def _type_field(position, value, label="field"):
+    try:
+        pyautogui.moveTo(position)
+        time.sleep(0.1)
+        pyautogui.click()
+        time.sleep(0.2)
+        pyautogui.hotkey("ctrl", "a")
+        pyautogui.typewrite(f"{value:.2f}")
+        log.debug("Typed %.2f into %s", value, label)
+        return True
+    except Exception as e:
+        log.error("Typing failed on %s: %s", label, e)
+        return False
+
+
+def execute_trade(signal, current_price, tp_price, sl_price):
+    log.info("Signal: %s @ %.2f  TP: %.2f  SL: %.2f", signal, current_price, tp_price, sl_price)
+
     if signal == "long":
-        tp = current_price * (1 + tp_pct)
-        sl = current_price * (1 - sl_pct)
-        pyautogui.moveTo(POSITIONS["buy_button"])
+        button_key = "buy_button"
     elif signal == "short":
-        tp = current_price * (1 - tp_pct)
-        sl = current_price * (1 + sl_pct)
-        pyautogui.moveTo(POSITIONS["sell_button"])
+        button_key = "sell_button"
     else:
-        return
+        return False
 
-    pyautogui.click()
-    time.sleep(0.5)
+    if not _safe_click(POSITIONS[button_key], button_key):
+        return False
+    time.sleep(CLICK_DELAY)
 
-    type_field(POSITIONS["tp_input_field"], tp)
-    type_field(POSITIONS["sl_input_field"], sl)
+    if not _type_field(POSITIONS["tp_input_field"], tp_price, "TP"):
+        return False
+    time.sleep(0.2)
 
-    pyautogui.moveTo(POSITIONS["confirm_button"])
-    pyautogui.click()
+    if not _type_field(POSITIONS["sl_input_field"], sl_price, "SL"):
+        return False
+    time.sleep(0.2)
 
-    print(f"[TV TRADE] TP: {tp:.2f}, SL: {sl:.2f} — Order Placed")
+    if not _safe_click(POSITIONS["confirm_button"], "confirm"):
+        return False
+
+    log.info("Order placed: %s @ %.2f  TP %.2f  SL %.2f", signal.upper(), current_price, tp_price, sl_price)
+    return True
+
+
+def close_position():
+    log.info("Closing position via TV...")
+    if not _safe_click(POSITIONS["close_position_button"], "close_position"):
+        log.error("Failed to close position on TradingView")
+        return False
+    time.sleep(CLICK_DELAY)
+    log.info("Position closed on TradingView")
+    return True

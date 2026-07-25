@@ -42,6 +42,9 @@ CONFIG = {
     "trade_cooldown": 60,       # seconds between trades
     "fetch_limit": 1500,        # candles to fetch (needs >= vwap_window + atr_period)
 
+    # --- Mode ---
+    "dry_run": True,             # True = simulate trades locally, False = execute on TradingView via pyautogui
+
     # --- Logging ---
     "log_level": logging.INFO,
 }

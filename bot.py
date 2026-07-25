@@ -5,8 +5,10 @@ from config import CONFIG
 from data_feed import fetch_candles
 from indicators import apply_indicators
 from strategy import check_entry
-from tv_trader import execute_trade, close_position
 from utils import can_trade, record_trade, seconds_until_next_candle
+
+if not CONFIG["dry_run"]:
+    from tv_trader import execute_trade, close_position
 
 log = logging.getLogger(__name__)
 
@@ -51,8 +53,13 @@ def main():
         datefmt="%H:%M:%S",
     )
 
+    dry_run = CONFIG["dry_run"]
+    mode = "DRY RUN" if dry_run else "LIVE"
     position = None
-    log.info("Bot started. Waiting for signal...")
+    wins = 0
+    losses = 0
+
+    log.info("Bot started (%s mode). Waiting for signal...", mode)
 
     while True:
         try:
@@ -79,10 +86,16 @@ def main():
                         tp_price = current_price - CONFIG["tp_atr_mult"] * current_atr
                         sl_price = current_price + CONFIG["sl_atr_mult"] * current_atr
 
-                    if execute_trade(signal, current_price, tp_price, sl_price):
+                    if dry_run:
                         position = Position(signal, current_price, tp_price, sl_price, current_atr)
                         record_trade()
-                        log.info("Entered %s @ %.2f  TP %.2f  SL %.2f", signal.upper(), current_price, tp_price, sl_price)
+                        log.info("Entered %s @ %.2f  TP %.2f  SL %.2f  [%s]",
+                                 signal.upper(), current_price, tp_price, sl_price, mode)
+                    elif execute_trade(signal, current_price, tp_price, sl_price):
+                        position = Position(signal, current_price, tp_price, sl_price, current_atr)
+                        record_trade()
+                        log.info("Entered %s @ %.2f  TP %.2f  SL %.2f  [%s]",
+                                 signal.upper(), current_price, tp_price, sl_price, mode)
 
             # --- Open position: update trailing stop + check exit ---
             else:
@@ -93,17 +106,36 @@ def main():
                 exit_signal = position.check_exit(current_price)
 
                 if exit_signal == "sl":
-                    log.info("Trailing SL hit @ %.2f — closing position", current_price)
-                    close_position()
+                    if position.side == "long":
+                        pnl = (current_price - position.entry_price) / position.entry_price * 100
+                    else:
+                        pnl = (position.entry_price - current_price) / position.entry_price * 100
+                    if pnl > 0:
+                        wins += 1
+                    else:
+                        losses += 1
+                    log.info("SL hit @ %.2f  PnL %.2f%%  W/L %d/%d  [%s]",
+                             current_price, pnl, wins, losses, mode)
+                    if not dry_run:
+                        close_position()
                     position = None
 
                 elif exit_signal == "tp":
-                    log.info("TP hit @ %.2f — position closed by TV", current_price)
+                    if position.side == "long":
+                        pnl = (current_price - position.entry_price) / position.entry_price * 100
+                    else:
+                        pnl = (position.entry_price - current_price) / position.entry_price * 100
+                    wins += 1
+                    log.info("TP hit @ %.2f  PnL +%.2f%%  W/L %d/%d  [%s]",
+                             current_price, pnl, wins, losses, mode)
+                    if not dry_run:
+                        close_position()
                     position = None
 
                 else:
-                    log.debug("Monitoring %s  price=%.2f  trail_sl=%.2f  tp=%.2f",
-                              position.side.upper(), current_price, position.trailing_sl, position.tp_price)
+                    log.debug("Monitoring %s  price=%.2f  trail_sl=%.2f  tp=%.2f  [%s]",
+                              position.side.upper(), current_price, position.trailing_sl,
+                              position.tp_price, mode)
 
         except Exception as e:
             log.error("Error in main loop: %s", e)

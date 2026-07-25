@@ -3,13 +3,13 @@ import logging
 CONFIG = {
     # --- Trading Pair ---
     "symbol": "BTC/USD",
-    "timeframe": "1m",
+    "timeframe": "5m",
 
     # --- Indicators ---
     "rsi_period": 14,
     "bollinger_period": 20,
     "bollinger_dev": 2,
-    "vwap_window": 1440,       # 24h rolling window (1440 x 1m candles)
+    "vwap_window": 288,        # 24h rolling window (288 x 5m candles)
     "atr_period": 14,
 
     # --- Entry Thresholds ---

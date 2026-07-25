@@ -16,8 +16,7 @@ START_BALANCE = 100_000
 RISK_PCT = CONFIG["risk_pct"]
 TP_MULT = CONFIG["tp_atr_mult"]
 SL_MULT = CONFIG["sl_atr_mult"]
-TRAIL_ACTIVATE = CONFIG["trail_activate_atr"]
-TRAIL_SL_MULT = CONFIG["trail_sl_atr"]
+SWING_LB = CONFIG["swing_lookback"]
 
 
 def run_backtest(df):
@@ -31,7 +30,6 @@ def run_backtest(df):
     entry_price = None
     sl_price = None
     tp_price = None
-    best_price = None
     trailing_sl = None
     atr_at_entry = None
     wins = 0
@@ -51,7 +49,6 @@ def run_backtest(df):
                 position = signal
                 entry_price = price
                 atr_at_entry = atr
-                best_price = price
 
                 if position == "long":
                     sl_price = entry_price - SL_MULT * atr_at_entry
@@ -65,12 +62,9 @@ def run_backtest(df):
 
         # --- Open position: update trailing stop ---
         if position == "long":
-            if price > best_price:
-                best_price = price
-                if best_price - entry_price >= TRAIL_ACTIVATE * atr_at_entry:
-                    new_trail = best_price - TRAIL_SL_MULT * atr_at_entry
-                    if new_trail > trailing_sl:
-                        trailing_sl = new_trail
+            swing_low = df["low"].iloc[max(0, i - SWING_LB + 1):i + 1].min()
+            if swing_low > trailing_sl:
+                trailing_sl = swing_low
 
             # Check exit: SL first (worst case), then TP
             if row["low"] <= trailing_sl:
@@ -89,12 +83,9 @@ def run_backtest(df):
                 position = None
 
         elif position == "short":
-            if price < best_price:
-                best_price = price
-                if entry_price - best_price >= TRAIL_ACTIVATE * atr_at_entry:
-                    new_trail = best_price + TRAIL_SL_MULT * atr_at_entry
-                    if new_trail < trailing_sl:
-                        trailing_sl = new_trail
+            swing_high = df["high"].iloc[max(0, i - SWING_LB + 1):i + 1].max()
+            if swing_high < trailing_sl:
+                trailing_sl = swing_high
 
             if row["high"] >= trailing_sl:
                 exit_price = trailing_sl
@@ -130,13 +121,13 @@ def run_backtest(df):
         dd = (peak - eq) / peak
         max_dd = max(max_dd, dd)
 
-    # Sharpe ratio (annualized, assuming 1m candles)
+    # Sharpe ratio (annualized, assuming 5m candles)
     sharpe = 0.0
     if daily_returns and len(daily_returns) > 1:
         avg_ret = sum(daily_returns) / len(daily_returns)
         std_ret = (sum((r - avg_ret) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
         if std_ret > 0:
-            sharpe = (avg_ret / std_ret) * math.sqrt(525_600)  # annualize from 1m bars
+            sharpe = (avg_ret / std_ret) * math.sqrt(105_120)  # annualize from 5m bars
 
     print("\n--- BACKTEST REPORT ---")
     print(f"Trades       : {total}")

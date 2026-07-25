@@ -18,26 +18,17 @@ class Position:
         self.tp_price = tp_price
         self.sl_price = sl_price
         self.atr_at_entry = atr_at_entry
-        self.best_price = entry_price
         self.trailing_sl = sl_price
 
-    def update(self, current_price):
+    def update(self, swing_low, swing_high):
         if self.side == "long":
-            if current_price > self.best_price:
-                self.best_price = current_price
-                if self.best_price - self.entry_price >= CONFIG["trail_activate_atr"] * self.atr_at_entry:
-                    new_trail = self.best_price - CONFIG["trail_sl_atr"] * self.atr_at_entry
-                    if new_trail > self.trailing_sl:
-                        log.info("Trailing SL updated: %.2f -> %.2f", self.trailing_sl, new_trail)
-                        self.trailing_sl = new_trail
+            if swing_low > self.trailing_sl:
+                log.info("Trailing SL updated: %.2f -> %.2f", self.trailing_sl, swing_low)
+                self.trailing_sl = swing_low
         else:
-            if current_price < self.best_price:
-                self.best_price = current_price
-                if self.entry_price - self.best_price >= CONFIG["trail_activate_atr"] * self.atr_at_entry:
-                    new_trail = self.best_price + CONFIG["trail_sl_atr"] * self.atr_at_entry
-                    if new_trail < self.trailing_sl:
-                        log.info("Trailing SL updated: %.2f -> %.2f", self.trailing_sl, new_trail)
-                        self.trailing_sl = new_trail
+            if swing_high < self.trailing_sl:
+                log.info("Trailing SL updated: %.2f -> %.2f", self.trailing_sl, swing_high)
+                self.trailing_sl = swing_high
 
     def check_exit(self, current_price):
         if self.side == "long":
@@ -94,7 +85,10 @@ def main():
 
             # --- Open position: update trailing stop + check exit ---
             else:
-                position.update(current_price)
+                lb = CONFIG["swing_lookback"]
+                swing_low = df["low"].iloc[-lb:].min()
+                swing_high = df["high"].iloc[-lb:].max()
+                position.update(swing_low, swing_high)
                 exit_signal = position.check_exit(current_price)
 
                 if exit_signal == "sl":

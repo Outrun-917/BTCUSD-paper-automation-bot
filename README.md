@@ -32,6 +32,8 @@ This will guide you through hovering over each button in TradingView and capturi
 python bot.py
 ```
 
+By default runs in **dry-run mode** (simulates trades locally). Set `dry_run: False` in `config.py` to execute on TradingView via pyautogui.
+
 ## Backtesting
 
 ```bash
@@ -46,6 +48,7 @@ All parameters are in `config.py`:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `dry_run` | True | Simulate trades locally (True) or execute on TradingView (False) |
 | `rsi_period` | 14 | RSI lookback |
 | `bollinger_period` | 20 | Bollinger Bands period |
 | `bollinger_dev` | 2 | Bollinger Bands std dev |

@@ -74,6 +74,11 @@ def main():
                                   volume_period=CONFIG["volume_period"])
             current_price = df["close"].iloc[-1]
             current_atr = df["atr"].iloc[-1]
+            current_rsi = df["rsi"].iloc[-1]
+
+            pos_info = f"{position.side.upper()} entry={position.entry_price:.2f}" if position else "none"
+            log.info("Price %.2f  RSI %.1f  ATR %.2f  position=%s  W/L %d/%d  [%s]",
+                     current_price, current_rsi, current_atr, pos_info, wins, losses, mode)
 
             # --- No open position: check entry ---
             if position is None:

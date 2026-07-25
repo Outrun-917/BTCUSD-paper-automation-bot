@@ -13,8 +13,8 @@ CONFIG = {
     "atr_period": 14,
 
     # --- Entry Thresholds ---
-    "rsi_oversold": 32,
-    "rsi_overbought": 68,
+    "rsi_oversold": 38,
+    "rsi_overbought": 62,
 
     # --- Volume Filter ---
     "volume_mult": 1.0,          # disabled (set 1.2+ to require above-avg volume)

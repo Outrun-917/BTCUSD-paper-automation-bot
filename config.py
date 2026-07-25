@@ -24,6 +24,10 @@ CONFIG = {
     "trade_start_hour": 0,       # disabled (set 6-22 to filter to US/EU session)
     "trade_end_hour": 24,
 
+    # --- Confirmation Filters ---
+    "confirmation_candles": 1,   # wait N candles after signal before entering (0 = immediate)
+    "vwap_slope_period": 5,      # check VWAP slope over last N candles (0 = disabled)
+
     # --- Exit: ATR-Based TP/SL ---
     "tp_atr_mult": 1.5,        # take-profit = entry ± 1.5 * ATR
     "sl_atr_mult": 1.0,        # stop-loss  = entry ± 1.0 * ATR

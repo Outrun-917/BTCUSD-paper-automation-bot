@@ -9,14 +9,14 @@ def capture_position(label):
 
 
 def main():
-    print("\nTradingView Coordinate Capture Tool — NQ1!")
-    print("Open NQ1! on TradingView with your preferred chart layout before starting.")
+    print("\nTradingView Coordinate Capture Tool")
     print("-----------------------------------")
 
     positions = {}
     elements = [
         "buy_button",
         "sell_button",
+        "tp_input_field",
         "sl_input_field",
         "confirm_button",
         "close_position_button",

@@ -1,4 +1,4 @@
-yfinance
+ccxt
 ta
 pandas
 numpy

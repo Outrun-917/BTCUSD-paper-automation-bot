@@ -11,6 +11,7 @@ pyautogui.PAUSE = 0.1
 POSITIONS = {
     "buy_button": (-128, 250),
     "sell_button": (-291, 249),
+    "tp_input_field": (-303, 519),
     "sl_input_field": (-132, 517),
     "confirm_button": (-205, 641),
     "close_position_button": (0, 0),  # calibrate with calibrate_coords.py
@@ -51,7 +52,7 @@ def _type_field(position, value, label="field"):
 
 
 def execute_trade(signal, current_price, tp_price, sl_price):
-    log.info("Signal: %s @ %.2f  SL: %.2f", signal, current_price, sl_price)
+    log.info("Signal: %s @ %.2f  TP: %.2f  SL: %.2f", signal, current_price, tp_price, sl_price)
 
     if signal == "long":
         button_key = "buy_button"
@@ -64,6 +65,10 @@ def execute_trade(signal, current_price, tp_price, sl_price):
         return False
     time.sleep(CLICK_DELAY)
 
+    if not _type_field(POSITIONS["tp_input_field"], tp_price, "TP"):
+        return False
+    time.sleep(0.2)
+
     if not _type_field(POSITIONS["sl_input_field"], sl_price, "SL"):
         return False
     time.sleep(0.2)
@@ -71,7 +76,7 @@ def execute_trade(signal, current_price, tp_price, sl_price):
     if not _safe_click(POSITIONS["confirm_button"], "confirm"):
         return False
 
-    log.info("Order placed: %s @ %.2f  SL %.2f", signal.upper(), current_price, sl_price)
+    log.info("Order placed: %s @ %.2f  TP %.2f  SL %.2f", signal.upper(), current_price, tp_price, sl_price)
     return True
 
 

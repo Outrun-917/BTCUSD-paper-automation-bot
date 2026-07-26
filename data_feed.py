@@ -1,38 +1,55 @@
 import logging
 
-import ccxt
 import pandas as pd
+import yfinance as yf
 
 log = logging.getLogger(__name__)
 
-exchange = ccxt.okx()
 
-OKX_MAX = 300
-
-
-def fetch_candles(symbol="BTC/USD", timeframe="1m", limit=1500):
+def fetch_candles(symbol="NQ=F", timeframe="15m", limit=500):
     try:
-        all_candles = []
-        after = None
-        remaining = limit
+        ticker = yf.Ticker(symbol)
 
-        while remaining > 0:
-            batch = min(remaining, OKX_MAX)
-            params = {"after": after} if after else {}
-            candles = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=batch, params=params)
-            if not candles:
-                break
-            all_candles = candles + all_candles
-            after = candles[0][0]
-            remaining -= len(candles)
-            if len(candles) < batch:
-                break
+        # yfinance limits: 1m=7d, 5m=60d, 15m=60d, 1h=730d, 1d=unlimited
+        tf_map = {
+            "1m": ("1m", "7d"),
+            "5m": ("5m", "60d"),
+            "15m": ("15m", "60d"),
+            "30m": ("30m", "60d"),
+            "1h": ("1h", "730d"),
+            "1d": ("1d", "10y"),
+        }
 
-        df = pd.DataFrame(all_candles, columns=["timestamp", "open", "high", "low", "close", "volume"])
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
-        df.set_index("timestamp", inplace=True)
-        df = df[~df.index.duplicated(keep="first")]
+        if timeframe not in tf_map:
+            log.error("Unsupported timeframe: %s", timeframe)
+            return None
+
+        interval, period = tf_map[timeframe]
+        df = ticker.history(period=period, interval=interval)
+
+        if df.empty:
+            log.warning("No data returned for %s", symbol)
+            return None
+
+        # Standardize columns
+        df = df.rename(columns={
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close": "close",
+            "Volume": "volume",
+        })
+
+        df = df[["open", "high", "low", "close", "volume"]]
+        df.index.name = "timestamp"
+
+        # Trim to requested limit
+        if len(df) > limit:
+            df = df.iloc[-limit:]
+
+        log.info("Fetched %d candles for %s (%s)", len(df), symbol, timeframe)
         return df
+
     except Exception as e:
         log.error("Failed to fetch candles: %s", e)
         return None

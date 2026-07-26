@@ -10,39 +10,41 @@ from strategy import check_entry
 
 log = logging.getLogger(__name__)
 
-WARMUP = 100
+# --- Backtest Config ---
+WARMUP = 200
 START_BALANCE = 100_000
 RISK_PCT = CONFIG["risk_pct"]
+TP_MULT = CONFIG["tp_atr_mult"]
 SL_MULT = CONFIG["sl_atr_mult"]
 SWING_LB = CONFIG["swing_lookback"]
-COOLDOWN_BARS = 4  # minimum bars between entries (1 hour for 15m candles)
 
 
 def run_backtest(df):
-    df = apply_indicators(df, atr_period=CONFIG["atr_period"])
-    df.dropna(subset=["atr"], inplace=True)
+    df = apply_indicators(df, vwap_window=CONFIG["vwap_window"], atr_period=CONFIG["atr_period"],
+                          bb_period=CONFIG["bollinger_period"], bb_dev=CONFIG["bollinger_dev"],
+                          volume_period=CONFIG["volume_period"])
+    df.dropna(inplace=True)
 
     balance = START_BALANCE
     peak_balance = START_BALANCE
     position = None
     entry_price = None
     sl_price = None
+    tp_price = None
     trailing_sl = None
     atr_at_entry = None
     wins = 0
     losses = 0
-    bars_since_trade = COOLDOWN_BARS  # start ready to trade
     equity_curve = [START_BALANCE]
-    returns = []
+    daily_returns = []
 
     for i in range(WARMUP, len(df)):
         row = df.iloc[i]
         price = row["close"]
         atr = row["atr"]
-        bars_since_trade += 1
 
         # --- No open position: check for entry ---
-        if position is None and bars_since_trade >= COOLDOWN_BARS:
+        if position is None:
             signal = check_entry(df.iloc[:i + 1])
             if signal:
                 position = signal
@@ -51,27 +53,34 @@ def run_backtest(df):
 
                 if position == "long":
                     sl_price = entry_price - SL_MULT * atr_at_entry
+                    tp_price = entry_price + TP_MULT * atr_at_entry
+                    trailing_sl = sl_price
                 else:
                     sl_price = entry_price + SL_MULT * atr_at_entry
-                trailing_sl = sl_price
-                bars_since_trade = 0
+                    tp_price = entry_price - TP_MULT * atr_at_entry
+                    trailing_sl = sl_price
                 continue
 
-        # --- Open position: update trailing stop + check exit ---
+        # --- Open position: update trailing stop ---
         if position == "long":
             swing_low = df["low"].iloc[max(0, i - SWING_LB + 1):i + 1].min()
             if swing_low > trailing_sl:
                 trailing_sl = swing_low
 
+            # Check exit: SL first (worst case), then TP
             if row["low"] <= trailing_sl:
                 exit_price = trailing_sl
                 pnl_pct = (exit_price - entry_price) / entry_price
                 balance += balance * RISK_PCT * pnl_pct / SL_MULT
-                if pnl_pct > 0:
-                    wins += 1
-                else:
-                    losses += 1
+                losses += 1
                 log.info("LONG SL  @ %.2f  (pnl %.2f%%)", exit_price, pnl_pct * 100)
+                position = None
+            elif row["high"] >= tp_price:
+                exit_price = tp_price
+                pnl_pct = (exit_price - entry_price) / entry_price
+                balance += balance * RISK_PCT * pnl_pct / SL_MULT
+                wins += 1
+                log.info("LONG TP  @ %.2f  (pnl %.2f%%)", exit_price, pnl_pct * 100)
                 position = None
 
         elif position == "short":
@@ -83,22 +92,29 @@ def run_backtest(df):
                 exit_price = trailing_sl
                 pnl_pct = (entry_price - exit_price) / entry_price
                 balance += balance * RISK_PCT * pnl_pct / SL_MULT
-                if pnl_pct > 0:
-                    wins += 1
-                else:
-                    losses += 1
+                losses += 1
                 log.info("SHORT SL @ %.2f  (pnl %.2f%%)", exit_price, pnl_pct * 100)
                 position = None
+            elif row["low"] <= tp_price:
+                exit_price = tp_price
+                pnl_pct = (entry_price - exit_price) / entry_price
+                balance += balance * RISK_PCT * pnl_pct / SL_MULT
+                wins += 1
+                log.info("SHORT TP @ %.2f  (pnl %.2f%%)", exit_price, pnl_pct * 100)
+                position = None
 
+        # Track equity curve
         equity_curve.append(balance)
         if len(equity_curve) > 1:
-            returns.append((equity_curve[-1] - equity_curve[-2]) / equity_curve[-2])
+            daily_returns.append((equity_curve[-1] - equity_curve[-2]) / equity_curve[-2])
+
         peak_balance = max(peak_balance, balance)
 
     # --- Report ---
     total = wins + losses
     winrate = (wins / total) * 100 if total else 0
 
+    # Max drawdown
     max_dd = 0.0
     peak = equity_curve[0]
     for eq in equity_curve:
@@ -106,14 +122,13 @@ def run_backtest(df):
         dd = (peak - eq) / peak
         max_dd = max(max_dd, dd)
 
-    # Sharpe ratio (annualized, assuming 15m candles)
-    # 15m bars per year: 365.25 * 24 * 4 = 35,064
+    # Sharpe ratio (annualized, assuming 5m candles)
     sharpe = 0.0
-    if returns and len(returns) > 1:
-        avg_ret = sum(returns) / len(returns)
-        std_ret = (sum((r - avg_ret) ** 2 for r in returns) / len(returns)) ** 0.5
+    if daily_returns and len(daily_returns) > 1:
+        avg_ret = sum(daily_returns) / len(daily_returns)
+        std_ret = (sum((r - avg_ret) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
         if std_ret > 0:
-            sharpe = (avg_ret / std_ret) * math.sqrt(35_064)
+            sharpe = (avg_ret / std_ret) * math.sqrt(105_120)  # annualize from 5m bars
 
     print("\n--- BACKTEST REPORT ---")
     print(f"Trades       : {total}")
